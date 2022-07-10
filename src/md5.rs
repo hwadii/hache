@@ -1,14 +1,15 @@
 use crate::Base;
 
+const BLOCK_LENGTH: i8 = 64;
+const DIGEST_LENGTH: i8 = 16;
+const DIGEST_STRING_LENGTH: i8 = DIGEST_LENGTH * 2 + 1;
+
 #[derive(Debug)]
-pub struct MD5 {
-    block_length: i32,
-    digest_length: i32,
-}
+pub struct MD5 {}
 
 impl MD5 {
     fn new() -> Self {
-        Self { block_length: 10, digest_length: 20 }
+        Self {}
     }
 }
 
