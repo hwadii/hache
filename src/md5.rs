@@ -13,18 +13,16 @@ impl MD5 {
 }
 
 impl Base for MD5 {
-    fn base(&mut self, _value: String) -> &mut Self {
-        self
-    }
-
     fn reset(&mut self) -> &mut Self {
-        self.block_length = 0;
-        self.digest_length = 0;
-        self
+        todo!()
     }
 
     fn update(&self, _value: String) -> Self {
         todo!()
+    }
+
+    fn hexdigest(value: &str) -> String {
+        value.to_string()
     }
 }
 
