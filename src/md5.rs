@@ -82,7 +82,11 @@ impl MD5 {
 
 impl Base for MD5 {
     fn reset(&mut self) -> &mut Self {
-        todo!()
+        self.state = [0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476];
+        self.count.fill(0);
+        self.buffer.fill(0);
+
+        self
     }
 
     fn update(&self, _value: String) -> Self {
