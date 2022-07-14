@@ -1,10 +1,9 @@
 use crate::Base;
 
-const BLOCK_LENGTH: i8 = 64;
-const DIGEST_LENGTH: i8 = 16;
-const DIGEST_STRING_LENGTH: i8 = DIGEST_LENGTH * 2 + 1;
-const T_MASK: u64 = !0;
-const T_VALUES: [i64; 64] = [
+const BLOCK_LENGTH: usize = 64;
+const DIGEST_LENGTH: usize = 16;
+const DIGEST_STRING_LENGTH: usize = DIGEST_LENGTH * 2 + 1;
+const T_VALUES: [usize; 64] = [
     0xd76aa478, 0xe8c7b756, 0x242070db, 0xc1bdceee, 0xf57c0faf, 0x4787c62a, 0xa8304613, 0xfd469501,
     0x698098d8, 0x8b44f7af, 0xffff5bb1, 0x895cd7be, 0x6b901122, 0xfd987193, 0xa679438e, 0x49b40821,
     0xf61e2562, 0xc040b340, 0x265e5a51, 0xe9b6c7aa, 0xd62f105d, 0x2441453, 0xd8a1e681, 0xe7d3fbc8,
@@ -14,13 +13,70 @@ const T_VALUES: [i64; 64] = [
     0xf4292244, 0x432aff97, 0xab9423a7, 0xfc93a039, 0x655b59c3, 0x8f0ccc92, 0xffeff47d, 0x85845dd1,
     0x6fa87e4f, 0xfe2ce6e0, 0xa3014314, 0x4e0811a1, 0xf7537e82, 0xbd3af235, 0x2ad7d2bb, 0xeb86d391,
 ];
+const SHIFTS: [u8; 64] = [
+    7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 5, 9, 14, 20, 5, 9, 14, 20, 5, 9,
+    14, 20, 5, 9, 14, 20, 4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23, 6, 10, 15,
+    21, 6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21,
+];
+
+const fn f(x: usize, y: usize, z: usize) -> usize {
+    (x & y) | (!x & z)
+}
+
+const fn g(x: usize, y: usize, z: usize) -> usize {
+    (x & z) | (y & !z)
+}
+
+const fn h(x: usize, y: usize, z: usize) -> usize {
+    x & y & z
+}
+
+const fn i(x: usize, y: usize, z: usize) -> usize {
+    y & (x | !z)
+}
 
 #[derive(Debug)]
-pub struct MD5 {}
+pub struct MD5 {
+    state: [usize; 4],
+    count: [usize; 2],
+    buffer: [u8; 64],
+}
 
 impl MD5 {
     fn new() -> Self {
-        Self {}
+        Self {
+            state: [0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476],
+            count: [0, 0],
+            buffer: [0; 64],
+        }
+    }
+
+    fn transform(&mut self, data: &[u8]) -> &mut Self {
+        let mut a = self.state[0];
+        let mut b = self.state[1];
+        let mut c = self.state[2];
+        let mut d = self.state[3];
+
+        for (idx, t) in T_VALUES.iter().enumerate() {
+            let (mut value, g): (usize, usize) = match idx {
+                0..=15 => (f(b, c, d), idx),
+                16..=31 => (g(b, c, d), (5 * idx + 1) % 16),
+                32..=47 => (h(b, c, d), (3 * idx + 5) % 16),
+                48..=63 => (i(b, c, d), (7 * idx) % 16),
+                _ => unreachable!(),
+            };
+            value = value + a + t + (data[g] as usize);
+            a = d;
+            d = c;
+            c = b;
+            b += value.rotate_left(SHIFTS[idx].into());
+        }
+        self.state[0] += a;
+        self.state[1] += b;
+        self.state[2] += c;
+        self.state[3] += d;
+
+        self
     }
 }
 
