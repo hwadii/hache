@@ -65,7 +65,7 @@ impl MD5 {
                 48..=63 => (i(b, c, d), (7 * idx) % 16),
                 _ => unreachable!(),
             };
-            value = value + a + t + (data[g] as usize);
+            value += a + t + (data[g] as usize);
             a = d;
             d = c;
             c = b;
@@ -89,8 +89,52 @@ impl Base for MD5 {
         self
     }
 
-    fn update(&self, _value: String) -> Self {
-        todo!()
+    fn update(&mut self, value: &[u8]) -> &mut Self {
+        // Compute number of bytes mod 64
+        let offset = (self.count[0] >> 3) & 63;
+        let nbytes = value.len();
+        let nbits = nbytes << 3;
+        let mut left = nbytes;
+        let mut p = value;
+
+        if nbytes == 0 {
+            return self;
+        }
+
+        // Update the number of bits
+        self.count[0] += nbits;
+        if self.count[0] < nbits {
+            self.count[1] += 1;
+        }
+        self.count[1] += nbytes >> 29;
+
+        // Process an initial partial block
+        if offset != 0 {
+            let copy = if offset + nbytes > BLOCK_LENGTH { BLOCK_LENGTH } else { nbytes };
+
+            self.buffer[offset..(offset + copy)].copy_from_slice(&p[..copy]);
+            if offset + copy < BLOCK_LENGTH {
+                return self;
+            }
+
+            p = &p[copy..];
+            left -= copy;
+            self.transform(&self.buffer.clone());
+        }
+
+        // Process full blocks
+        while left >= BLOCK_LENGTH {
+            self.transform(&self.buffer.clone());
+            p = &p[BLOCK_LENGTH..];
+            left -= BLOCK_LENGTH;
+        }
+
+        // Process a final partial block
+        if left != 0 {
+            self.buffer[..left].copy_from_slice(&p[..left]);
+        }
+
+        self
     }
 
     fn hexdigest(value: &str) -> String {
