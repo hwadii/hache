@@ -89,10 +89,10 @@ impl Base for MD5 {
         self
     }
 
-    fn update(&mut self, value: &[u8]) -> &mut Self {
+    fn update(&mut self, value: &[u8], nbytes: Option<usize>) -> &mut Self {
         // Compute number of bytes mod 64
         let offset = (self.count[0] >> 3) & 63;
-        let nbytes = value.len();
+        let nbytes = nbytes.unwrap_or(value.len());
         let nbits = nbytes << 3;
         let mut left = nbytes;
         let mut p = value;
