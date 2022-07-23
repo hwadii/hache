@@ -2,8 +2,8 @@ use crate::Base;
 
 const BLOCK_LENGTH: usize = 64;
 const DIGEST_LENGTH: usize = 16;
-const DIGEST_STRING_LENGTH: usize = DIGEST_LENGTH * 2 + 1;
-const T_VALUES: [usize; 64] = [
+const _DIGEST_STRING_LENGTH: usize = DIGEST_LENGTH * 2 + 1;
+const T_VALUES: [u32; 64] = [
     0xd76aa478, 0xe8c7b756, 0x242070db, 0xc1bdceee, 0xf57c0faf, 0x4787c62a, 0xa8304613, 0xfd469501,
     0x698098d8, 0x8b44f7af, 0xffff5bb1, 0x895cd7be, 0x6b901122, 0xfd987193, 0xa679438e, 0x49b40821,
     0xf61e2562, 0xc040b340, 0x265e5a51, 0xe9b6c7aa, 0xd62f105d, 0x2441453, 0xd8a1e681, 0xe7d3fbc8,
@@ -24,26 +24,26 @@ const PADDING: [u8; 64] = [
     0,
 ];
 
-const fn f(x: usize, y: usize, z: usize) -> usize {
+const fn f(x: u32, y: u32, z: u32) -> u32 {
     (x & y) | (!x & z)
 }
 
-const fn g(x: usize, y: usize, z: usize) -> usize {
+const fn g(x: u32, y: u32, z: u32) -> u32 {
     (x & z) | (y & !z)
 }
 
-const fn h(x: usize, y: usize, z: usize) -> usize {
+const fn h(x: u32, y: u32, z: u32) -> u32 {
     x & y & z
 }
 
-const fn i(x: usize, y: usize, z: usize) -> usize {
+const fn i(x: u32, y: u32, z: u32) -> u32 {
     y & (x | !z)
 }
 
 #[derive(Debug)]
 pub struct MD5 {
-    state: [usize; 4],
-    count: [usize; 2],
+    state: [u32; 4],
+    count: [u32; 2],
     buffer: [u8; BLOCK_LENGTH],
 }
 
@@ -62,19 +62,19 @@ impl MD5 {
         let mut c = self.state[2];
         let mut d = self.state[3];
 
-        for (idx, t) in T_VALUES.iter().enumerate() {
-            let (mut value, g): (usize, usize) = match idx {
+        for (idx, t_value) in T_VALUES.iter().enumerate() {
+            let (value, g): (u32, usize) = match idx {
                 0..=15 => (f(b, c, d), idx),
                 16..=31 => (g(b, c, d), (5 * idx + 1) % DIGEST_LENGTH),
                 32..=47 => (h(b, c, d), (3 * idx + 5) % DIGEST_LENGTH),
                 48..=63 => (i(b, c, d), (7 * idx) % DIGEST_LENGTH),
                 _ => unreachable!(),
             };
-            value += a + t + (data[g] as usize);
+            let f = value + a + t_value + data[g] as u32;
             a = d;
             d = c;
             c = b;
-            b += value.rotate_left(SHIFTS[idx].into());
+            b += f.rotate_left(SHIFTS[idx].into());
         }
         self.state[0] += a;
         self.state[1] += b;
@@ -89,17 +89,20 @@ impl MD5 {
 
         // Save the length before padding.
         for (i, bit) in bits.iter_mut().enumerate() {
-            *bit = self.count[i >> 2] as u8 >> ((i & 3) << 3);
+            *bit = (self.count[i >> 2] >> ((i & 3) << 3)) as u8;
         }
         // Pad to 56 bytes mod 64
-        self.update(&PADDING, Some(((55 - (self.count[0] >> 3)) & 63) + 1));
+        self.update(
+            &PADDING,
+            Some(((55 - (self.count[0] as usize >> 3)) & 63) + 1),
+        );
 
         // Append the length
         self.update(&bits, None);
 
         (0..DIGEST_LENGTH)
             .into_iter()
-            .map(|i| self.state[i >> 2] as u8 >> ((i & 3) << 3))
+            .map(|i| (self.state[i >> 2] >> ((i & 3) << 3)) as u8)
             .collect::<Vec<_>>()
             .try_into()
             .unwrap()
@@ -117,9 +120,9 @@ impl Base for MD5 {
 
     fn update(&mut self, value: &[u8], nbytes: Option<usize>) -> &mut Self {
         // Compute number of bytes mod 64
-        let offset = (self.count[0] >> 3) & 63;
+        let offset = ((self.count[0] >> 3) & 63) as usize;
         let nbytes = nbytes.unwrap_or(value.len());
-        let nbits = nbytes << 3;
+        let nbits = (nbytes << 3) as u32;
         let mut left = nbytes;
         let mut p = value;
 
@@ -132,11 +135,15 @@ impl Base for MD5 {
         if self.count[0] < nbits {
             self.count[1] += 1;
         }
-        self.count[1] += nbytes >> 29;
+        self.count[1] += (nbytes >> 29) as u32;
 
         // Process an initial partial block
         if offset != 0 {
-            let copy = if offset + nbytes > BLOCK_LENGTH { BLOCK_LENGTH } else { nbytes };
+            let copy = if offset + nbytes as usize > BLOCK_LENGTH {
+                BLOCK_LENGTH
+            } else {
+                nbytes
+            };
 
             self.buffer[offset..(offset + copy)].copy_from_slice(&p[..copy]);
             if offset + copy < BLOCK_LENGTH {
