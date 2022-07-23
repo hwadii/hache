@@ -44,7 +44,7 @@ const fn i(x: usize, y: usize, z: usize) -> usize {
 pub struct MD5 {
     state: [usize; 4],
     count: [usize; 2],
-    buffer: [u8; 64],
+    buffer: [u8; BLOCK_LENGTH],
 }
 
 impl MD5 {
@@ -52,7 +52,7 @@ impl MD5 {
         Self {
             state: [0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476],
             count: [0, 0],
-            buffer: [0; 64],
+            buffer: [0; BLOCK_LENGTH],
         }
     }
 
@@ -65,9 +65,9 @@ impl MD5 {
         for (idx, t) in T_VALUES.iter().enumerate() {
             let (mut value, g): (usize, usize) = match idx {
                 0..=15 => (f(b, c, d), idx),
-                16..=31 => (g(b, c, d), (5 * idx + 1) % 16),
-                32..=47 => (h(b, c, d), (3 * idx + 5) % 16),
-                48..=63 => (i(b, c, d), (7 * idx) % 16),
+                16..=31 => (g(b, c, d), (5 * idx + 1) % DIGEST_LENGTH),
+                32..=47 => (h(b, c, d), (3 * idx + 5) % DIGEST_LENGTH),
+                48..=63 => (i(b, c, d), (7 * idx) % DIGEST_LENGTH),
                 _ => unreachable!(),
             };
             value += a + t + (data[g] as usize);
@@ -97,7 +97,7 @@ impl MD5 {
         // Append the length
         self.update(&bits, None);
 
-        (0..16)
+        (0..DIGEST_LENGTH)
             .into_iter()
             .map(|i| self.state[i >> 2] as u8 >> ((i & 3) << 3))
             .collect::<Vec<_>>()
