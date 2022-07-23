@@ -18,6 +18,11 @@ const SHIFTS: [u8; 64] = [
     14, 20, 5, 9, 14, 20, 4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23, 6, 10, 15,
     21, 6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21,
 ];
+const PADDING: [u8; 64] = [
+    0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    0,
+];
 
 const fn f(x: usize, y: usize, z: usize) -> usize {
     (x & y) | (!x & z)
@@ -77,6 +82,27 @@ impl MD5 {
         self.state[3] += d;
 
         self
+    }
+
+    fn finish(&mut self) -> [u8; DIGEST_LENGTH] {
+        let mut bits: [u8; 8] = [0; 8];
+
+        // Save the length before padding.
+        for (i, bit) in bits.iter_mut().enumerate() {
+            *bit = self.count[i >> 2] as u8 >> ((i & 3) << 3);
+        }
+        // Pad to 56 bytes mod 64
+        self.update(&PADDING, Some(((55 - (self.count[0] >> 3)) & 63) + 1));
+
+        // Append the length
+        self.update(&bits, None);
+
+        (0..16)
+            .into_iter()
+            .map(|i| self.state[i >> 2] as u8 >> ((i & 3) << 3))
+            .collect::<Vec<_>>()
+            .try_into()
+            .unwrap()
     }
 }
 
