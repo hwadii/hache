@@ -33,11 +33,11 @@ const fn g(x: u32, y: u32, z: u32) -> u32 {
 }
 
 const fn h(x: u32, y: u32, z: u32) -> u32 {
-    x & y & z
+    x ^ y ^ z
 }
 
 const fn i(x: u32, y: u32, z: u32) -> u32 {
-    y & (x | !z)
+    y ^ (x | !z)
 }
 
 #[derive(Debug)]
