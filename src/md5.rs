@@ -1,3 +1,6 @@
+use std::fmt;
+use std::num::Wrapping;
+
 use crate::Base;
 
 const BLOCK_LENGTH: usize = 64;
@@ -23,6 +26,12 @@ const PADDING: [u8; 64] = [
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0,
 ];
+const INITIAL_STATE: [Wrapping<u32>; 4] = [
+    Wrapping(0x67452301),
+    Wrapping(0xefcdab89),
+    Wrapping(0x98badcfe),
+    Wrapping(0x10325476),
+];
 
 const fn f(x: u32, y: u32, z: u32) -> u32 {
     (x & y) | (!x & z)
@@ -40,9 +49,8 @@ const fn i(x: u32, y: u32, z: u32) -> u32 {
     y ^ (x | !z)
 }
 
-#[derive(Debug)]
 pub struct MD5 {
-    state: [u32; 4],
+    state: [Wrapping<u32>; 4],
     count: [u32; 2],
     buffer: [u8; BLOCK_LENGTH],
 }
@@ -50,7 +58,7 @@ pub struct MD5 {
 impl MD5 {
     fn new() -> Self {
         Self {
-            state: [0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476],
+            state: INITIAL_STATE,
             count: [0, 0],
             buffer: [0; BLOCK_LENGTH],
         }
@@ -63,18 +71,18 @@ impl MD5 {
         let mut d = self.state[3];
 
         for (idx, t_value) in T_VALUES.iter().enumerate() {
-            let (value, g): (u32, usize) = match idx {
-                0..=15 => (f(b, c, d), idx),
-                16..=31 => (g(b, c, d), (5 * idx + 1) % DIGEST_LENGTH),
-                32..=47 => (h(b, c, d), (3 * idx + 5) % DIGEST_LENGTH),
-                48..=63 => (i(b, c, d), (7 * idx) % DIGEST_LENGTH),
+            let (value, g): (Wrapping<u32>, usize) = match idx {
+                0..=15 => (Wrapping(f(b.0, c.0, d.0)), idx),
+                16..=31 => (Wrapping(g(b.0, c.0, d.0)), (5 * idx + 1) % DIGEST_LENGTH),
+                32..=47 => (Wrapping(h(b.0, c.0, d.0)), (3 * idx + 5) % DIGEST_LENGTH),
+                48..=63 => (Wrapping(i(b.0, c.0, d.0)), (7 * idx) % DIGEST_LENGTH),
                 _ => unreachable!(),
             };
-            let f = value + a + t_value + data[g] as u32;
+            let f = value + a + Wrapping(*t_value) + Wrapping(data[g].into());
             a = d;
             d = c;
             c = b;
-            b += f.rotate_left(SHIFTS[idx].into());
+            b += Wrapping(f.0.rotate_left(SHIFTS[idx].into()));
         }
         self.state[0] += a;
         self.state[1] += b;
@@ -102,7 +110,7 @@ impl MD5 {
 
         (0..DIGEST_LENGTH)
             .into_iter()
-            .map(|i| (self.state[i >> 2] >> ((i & 3) << 3)) as u8)
+            .map(|i| (self.state[i >> 2].0 >> ((i & 3) << 3)) as u8)
             .collect::<Vec<_>>()
             .try_into()
             .unwrap()
@@ -111,7 +119,7 @@ impl MD5 {
 
 impl Base for MD5 {
     fn reset(&mut self) -> &mut Self {
-        self.state = [0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476];
+        self.state = INITIAL_STATE;
         self.count.fill(0);
         self.buffer.fill(0);
 
