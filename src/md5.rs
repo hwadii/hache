@@ -50,6 +50,16 @@ const fn i(x: u32, y: u32, z: u32) -> u32 {
     y ^ (x | !z)
 }
 
+fn slice_to_int(data: &[u8]) -> u32 {
+    data.iter().enumerate().fold(0, |value, (idx, int)| {
+        let mut v = (int / 16, int % 16);
+        let low = v.1 as u32 * u32::pow(16, (idx * 2) as u32);
+        v = (v.0 / 16, v.0 % 16);
+        let hi = v.1 as u32 * u32::pow(16, (idx * 2 + 1) as u32);
+        value + low + hi
+    })
+}
+
 pub struct MD5 {
     state: [Wrapping<u32>; 4],
     count: [u32; 2],
@@ -79,7 +89,8 @@ impl MD5 {
                 48..=63 => (Wrapping(i(b.0, c.0, d.0)), (7 * idx) % DIGEST_LENGTH),
                 _ => unreachable!(),
             };
-            let f = value + a + Wrapping(*t_value) + Wrapping(data[g].into());
+            let part_value = slice_to_int(&data[4 * g..4 * g + 4]);
+            let f = value + a + Wrapping(*t_value) + Wrapping(part_value);
             a = d;
             d = c;
             c = b;
