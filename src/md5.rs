@@ -105,12 +105,14 @@ impl MD5 {
     }
 
     fn finish(&mut self) -> [u8; DIGEST_LENGTH] {
-        let mut bits: [u8; 8] = [0; 8];
-
         // Save the length before padding.
-        for (i, bit) in bits.iter_mut().enumerate() {
-            *bit = (self.count[i >> 2] >> ((i & 3) << 3)) as u8;
-        }
+        let bits: [u8; 8] = (0..8)
+            .into_iter()
+            .map(|i| (self.count[i >> 2] >> ((i & 3) << 3)) as u8)
+            .collect::<Vec<_>>()
+            .try_into()
+            .expect("Couldn't transfrom vec into slice");
+
         // Pad to 56 bytes mod 64
         self.update(
             &PADDING,
@@ -125,7 +127,7 @@ impl MD5 {
             .map(|i| (self.state[i >> 2].0 >> ((i & 3) << 3)) as u8)
             .collect::<Vec<_>>()
             .try_into()
-            .unwrap()
+            .expect("Couldn't transform vec into slice")
     }
 }
 
