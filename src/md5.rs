@@ -104,43 +104,7 @@ impl MD5 {
         self
     }
 
-    fn finish(&mut self) -> [u8; DIGEST_LENGTH] {
-        // Save the length before padding.
-        let bits: [u8; 8] = (0..8)
-            .into_iter()
-            .map(|i| (self.count[i >> 2] >> ((i & 3) << 3)) as u8)
-            .collect::<Vec<_>>()
-            .try_into()
-            .expect("Couldn't transfrom vec into slice");
-
-        // Pad to 56 bytes mod 64
-        self.update(
-            &PADDING,
-            Some(((55 - (self.count[0] as usize >> 3)) & 63) + 1),
-        );
-
-        // Append the length
-        self.update(&bits, None);
-
-        (0..DIGEST_LENGTH)
-            .into_iter()
-            .map(|i| (self.state[i >> 2].0 >> ((i & 3) << 3)) as u8)
-            .collect::<Vec<_>>()
-            .try_into()
-            .expect("Couldn't transform vec into slice")
-    }
-}
-
-impl Base for MD5 {
-    fn reset(&mut self) -> &mut Self {
-        self.state = INITIAL_STATE;
-        self.count.fill(0);
-        self.buffer.fill(0);
-
-        self
-    }
-
-    fn update(&mut self, value: &[u8], nbytes: Option<usize>) -> &mut Self {
+    fn update_with_len(&mut self, value: &[u8], nbytes: Option<usize>) -> &mut Self {
         // Compute number of bytes mod 64
         let offset = ((self.count[0] >> 3) & 63) as usize;
         let nbytes = nbytes.unwrap_or(value.len());
@@ -192,10 +156,47 @@ impl Base for MD5 {
         self
     }
 
+    fn finish(&mut self) -> [u8; DIGEST_LENGTH] {
+        // Save the length before padding.
+        let bits: [u8; 8] = (0..8)
+            .into_iter()
+            .map(|i| (self.count[i >> 2] >> ((i & 3) << 3)) as u8)
+            .collect::<Vec<_>>()
+            .try_into()
+            .expect("Couldn't transfrom vec into slice");
+
+        // Pad to 56 bytes mod 64
+        self.update_with_len(&PADDING, Some(((55 - (self.count[0] as usize >> 3)) & 63) + 1));
+
+        // Append the length
+        self.update(&bits);
+
+        (0..DIGEST_LENGTH)
+            .into_iter()
+            .map(|i| (self.state[i >> 2].0 >> ((i & 3) << 3)) as u8)
+            .collect::<Vec<_>>()
+            .try_into()
+            .expect("Couldn't transform vec into slice")
+    }
+}
+
+impl Base for MD5 {
+    fn reset(&mut self) -> &mut Self {
+        self.state = INITIAL_STATE;
+        self.count.fill(0);
+        self.buffer.fill(0);
+
+        self
+    }
+
+    fn update(&mut self, value: &[u8]) -> &mut Self {
+        self.update_with_len(value, None)
+    }
+
     fn hexdigest(value: &str) -> Result<String, Box<dyn Error>> {
         let mut digest = String::new();
 
-        for di in Self::new().update(value.as_bytes(), None).finish() {
+        for di in Self::new().update(value.as_bytes()).finish() {
             write!(&mut digest, "{:02x}", di)?;
         }
 
