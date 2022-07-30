@@ -178,6 +178,16 @@ impl MD5 {
             .try_into()
             .expect("Couldn't transform vec into slice")
     }
+
+    fn as_str(&mut self) -> Result<String, Box<dyn Error>> {
+        let mut digest = String::new();
+
+        for di in self.finish() {
+            write!(&mut digest, "{:02x}", di)?;
+        }
+
+        Ok(digest)
+    }
 }
 
 impl Base for MD5 {
@@ -194,13 +204,7 @@ impl Base for MD5 {
     }
 
     fn hexdigest(value: &str) -> Result<String, Box<dyn Error>> {
-        let mut digest = String::new();
-
-        for di in Self::new().update(value.as_bytes()).finish() {
-            write!(&mut digest, "{:02x}", di)?;
-        }
-
-        Ok(digest)
+        Self::new().update(value.as_bytes()).as_str()
     }
 }
 
@@ -209,47 +213,53 @@ mod tests {
     use super::*;
 
     #[test]
-    fn it_computes_md5_0() {
+    fn test_md5_0() {
         let digest = MD5::hexdigest("");
         assert_eq!(digest.unwrap(), "d41d8cd98f00b204e9800998ecf8427e");
     }
 
     #[test]
-    fn it_computes_md5_1() {
+    fn test_md5_1() {
         let digest = MD5::hexdigest("a");
         assert_eq!(digest.unwrap(), "0cc175b9c0f1b6a831c399e269772661");
     }
 
     #[test]
-    fn it_computes_md5_2() {
+    fn test_md5_2() {
         let digest = MD5::hexdigest("abc");
         assert_eq!(digest.unwrap(), "900150983cd24fb0d6963f7d28e17f72");
     }
 
     #[test]
-    fn it_computes_md5_3() {
+    fn test_md5_3() {
         let digest = MD5::hexdigest("message digest");
         assert_eq!(digest.unwrap(), "f96b697d7cb7938d525a2f31aaf161d0");
     }
 
     #[test]
-    fn it_computes_md5_4() {
+    fn test_md5_4() {
         let digest = MD5::hexdigest("abcdefghijklmnopqrstuvwxyz");
         assert_eq!(digest.unwrap(), "c3fcd3d76192e4007dfb496cca67e13b");
     }
 
     #[test]
-    fn it_computes_md5_5() {
+    fn test_md5_5() {
         let digest =
             MD5::hexdigest("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789");
         assert_eq!(digest.unwrap(), "d174ab98d277d9f5a5611c2c9f419d9f");
     }
 
     #[test]
-    fn it_computes_md5_6() {
+    fn test_md5_6() {
         let digest = MD5::hexdigest(
             "12345678901234567890123456789012345678901234567890123456789012345678901234567890",
         );
         assert_eq!(digest.unwrap(), "57edf4a22be3c955ac49da2e2107b67a");
+    }
+
+    #[test]
+    fn test_reset_md5() {
+        let digest = MD5::new().update(b"a").reset().as_str();
+        assert_eq!(digest.unwrap(), "d41d8cd98f00b204e9800998ecf8427e");
     }
 }
