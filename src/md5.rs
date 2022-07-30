@@ -106,11 +106,10 @@ impl MD5 {
 
     fn update_with_len(&mut self, value: &[u8], nbytes: Option<usize>) -> &mut Self {
         // Compute number of bytes mod 64
-        let offset = ((self.count[0] >> 3) & 63) as usize;
+        let mut offset = ((self.count[0] >> 3) & 63) as usize;
         let nbytes = nbytes.unwrap_or(value.len());
         let nbits = (nbytes << 3) as u32;
-        let mut left = nbytes;
-        let mut p = value;
+        let p = value;
 
         if nbytes == 0 {
             return self;
@@ -123,35 +122,25 @@ impl MD5 {
         }
         self.count[1] += (nbytes >> 29) as u32;
 
-        // Process an initial partial block
-        if offset != 0 {
-            let copy = if offset + nbytes as usize > BLOCK_LENGTH {
-                BLOCK_LENGTH - offset
-            } else {
-                nbytes
-            };
+        let part_len = BLOCK_LENGTH - offset;
+        let mut i = part_len;
 
-            self.buffer[offset..(offset + copy)].copy_from_slice(&p[..copy]);
-            if offset + copy < BLOCK_LENGTH {
-                return self;
+        // Transform as many times as possible
+        if nbytes >= part_len {
+            self.buffer[offset..(offset + part_len)].copy_from_slice(&p[..part_len]);
+            self.transform(&self.buffer.clone());
+
+            while i < part_len.saturating_sub(63) {
+                let buf = self.buffer;
+                self.transform(&buf[i..]);
+                i += 64;
             }
-
-            p = &p[copy..];
-            left -= copy;
-            self.transform(&self.buffer.clone());
+            offset = 0;
+        } else {
+            i = 0;
         }
-
-        // Process full blocks
-        while left >= BLOCK_LENGTH {
-            self.transform(&self.buffer.clone());
-            p = &p[BLOCK_LENGTH..];
-            left -= BLOCK_LENGTH;
-        }
-
-        // Process a final partial block
-        if left != 0 {
-            self.buffer[..left].copy_from_slice(&p[..left]);
-        }
+        // Add remaining input in buffer
+        self.buffer[offset..(offset + nbytes - i)].copy_from_slice(&p[i..nbytes]);
 
         self
     }
