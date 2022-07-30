@@ -2,7 +2,7 @@ use std::error::Error;
 use std::fmt::Write;
 use std::num::Wrapping;
 
-use crate::Base;
+use crate::Digest;
 
 const BLOCK_LENGTH: usize = 64;
 const DIGEST_LENGTH: usize = 16;
@@ -181,7 +181,7 @@ impl MD5 {
     }
 }
 
-impl Base for MD5 {
+impl Digest for MD5 {
     fn reset(&mut self) -> &mut Self {
         self.state = INITIAL_STATE;
         self.count.fill(0);

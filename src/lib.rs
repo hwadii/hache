@@ -2,7 +2,7 @@ use std::error::Error;
 
 pub mod md5;
 
-pub trait Base {
+pub trait Digest {
     fn reset(&mut self) -> &mut Self;
     fn update(&mut self, value: &[u8]) -> &mut Self;
 
