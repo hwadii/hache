@@ -126,7 +126,7 @@ impl MD5 {
         // Process an initial partial block
         if offset != 0 {
             let copy = if offset + nbytes as usize > BLOCK_LENGTH {
-                BLOCK_LENGTH
+                BLOCK_LENGTH - offset
             } else {
                 nbytes
             };
@@ -165,8 +165,10 @@ impl MD5 {
             .try_into()
             .expect("Couldn't transfrom vec into slice");
 
-        // Pad to 56 bytes mod 64
-        self.update_with_len(&PADDING, Some(((55 - (self.count[0] as usize >> 3)) & 63) + 1));
+        // Pad out to 56 mod 64
+        let index = (self.count[0] >> 3) & 63;
+        let pad_len = if index < 56 { 56 - index } else { 120 - index };
+        self.update_with_len(&PADDING, Some(pad_len as usize));
 
         // Append the length
         self.update(&bits);
@@ -258,7 +260,7 @@ mod tests {
     }
 
     #[test]
-    fn test_reset_md5() {
+    fn test_reset() {
         let digest = MD5::new().update(b"a").reset().as_str();
         assert_eq!(digest.unwrap(), "d41d8cd98f00b204e9800998ecf8427e");
     }
