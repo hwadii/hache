@@ -34,22 +34,6 @@ const INITIAL_STATE: [Wrapping<u32>; 4] = [
     Wrapping(0x1032_5476),
 ];
 
-const fn f(x: u32, y: u32, z: u32) -> u32 {
-    (x & y) | (!x & z)
-}
-
-const fn g(x: u32, y: u32, z: u32) -> u32 {
-    (x & z) | (y & !z)
-}
-
-const fn h(x: u32, y: u32, z: u32) -> u32 {
-    x ^ y ^ z
-}
-
-const fn i(x: u32, y: u32, z: u32) -> u32 {
-    y ^ (x | !z)
-}
-
 fn slice_to_int(data: &[u8]) -> u32 {
     data.iter().enumerate().fold(0, |value, (idx, int)| {
         let mut v = (int / 16, int % 16);
@@ -76,6 +60,21 @@ impl MD5 {
     }
 
     fn transform(&mut self, data: &[u8]) -> &mut Self {
+        const fn f(x: u32, y: u32, z: u32) -> u32 {
+            (x & y) | (!x & z)
+        }
+
+        const fn g(x: u32, y: u32, z: u32) -> u32 {
+            (x & z) | (y & !z)
+        }
+
+        const fn h(x: u32, y: u32, z: u32) -> u32 {
+            x ^ y ^ z
+        }
+
+        const fn i(x: u32, y: u32, z: u32) -> u32 {
+            y ^ (x | !z)
+        }
         let mut a = self.state[0];
         let mut b = self.state[1];
         let mut c = self.state[2];
