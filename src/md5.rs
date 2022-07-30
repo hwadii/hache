@@ -238,6 +238,12 @@ mod tests {
     }
 
     #[test]
+    fn test_update_md5_many_times() {
+        let digest = MD5::new().update(b"a").update(b"b").update(b"c").as_str();
+        assert_eq!(digest.unwrap(), "900150983cd24fb0d6963f7d28e17f72");
+    }
+
+    #[test]
     fn test_reset() {
         let digest = MD5::new().update(b"a").reset().as_str();
         assert_eq!(digest.unwrap(), "d41d8cd98f00b204e9800998ecf8427e");
