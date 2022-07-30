@@ -2,7 +2,7 @@ use std::error::Error;
 use std::fmt::Write;
 use std::num::Wrapping;
 
-use crate::Digest;
+use crate::{Digest, hacheutil};
 
 const BLOCK_LENGTH: usize = 64;
 const DIGEST_LENGTH: usize = 16;
@@ -33,16 +33,6 @@ const INITIAL_STATE: [Wrapping<u32>; 4] = [
     Wrapping(0x98ba_dcfe),
     Wrapping(0x1032_5476),
 ];
-
-fn slice_to_int(data: &[u8]) -> u32 {
-    data.iter().enumerate().fold(0, |value, (idx, int)| {
-        let mut v = (int / 16, int % 16);
-        let low = u32::from(v.1) * u32::pow(16, (idx * 2) as u32);
-        v = (v.0 / 16, v.0 % 16);
-        let hi = u32::from(v.1) * u32::pow(16, (idx * 2 + 1) as u32);
-        value + low + hi
-    })
-}
 
 pub struct MD5 {
     state: [Wrapping<u32>; 4],
@@ -88,7 +78,7 @@ impl MD5 {
                 48..=63 => (Wrapping(i(b.0, c.0, d.0)), (7 * idx) % DIGEST_LENGTH),
                 _ => unreachable!(),
             };
-            let part_value = slice_to_int(&data[4 * g..4 * g + 4]);
+            let part_value = hacheutil::bytes_to_u32(&data[4 * g..4 * g + 4]);
             let f = value + a + Wrapping(*t_value) + Wrapping(part_value);
             a = d;
             d = c;

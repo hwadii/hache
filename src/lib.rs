@@ -1,6 +1,7 @@
 use std::error::Error;
 
 pub mod md5;
+mod hacheutil;
 
 pub trait Digest {
     fn reset(&mut self) -> &mut Self;
