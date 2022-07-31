@@ -1,6 +1,5 @@
 use std::error::Error;
 use std::fmt::Write;
-use std::num::Wrapping;
 
 use crate::{Digest, hacheutil};
 
@@ -27,15 +26,10 @@ const PADDING: [u8; 64] = [
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0,
 ];
-const INITIAL_STATE: [Wrapping<u32>; 4] = [
-    Wrapping(0x6745_2301),
-    Wrapping(0xefcd_ab89),
-    Wrapping(0x98ba_dcfe),
-    Wrapping(0x1032_5476),
-];
+const INITIAL_STATE: [u32; 4] = [0x6745_2301, 0xefcd_ab89, 0x98ba_dcfe, 0x1032_5476];
 
 pub struct MD5 {
-    state: [Wrapping<u32>; 4],
+    state: [u32; 4],
     count: [u32; 2],
     buffer: [u8; BLOCK_LENGTH],
 }
@@ -71,24 +65,27 @@ impl MD5 {
         let mut d = self.state[3];
 
         for (idx, t_value) in T_VALUES.iter().enumerate() {
-            let (value, g): (Wrapping<u32>, usize) = match idx {
-                0..=15 => (Wrapping(f(b.0, c.0, d.0)), idx),
-                16..=31 => (Wrapping(g(b.0, c.0, d.0)), (5 * idx + 1) % DIGEST_LENGTH),
-                32..=47 => (Wrapping(h(b.0, c.0, d.0)), (3 * idx + 5) % DIGEST_LENGTH),
-                48..=63 => (Wrapping(i(b.0, c.0, d.0)), (7 * idx) % DIGEST_LENGTH),
+            let (value, g): (u32, usize) = match idx {
+                0..=15 => (f(b, c, d), idx),
+                16..=31 => (g(b, c, d), (5 * idx + 1) % DIGEST_LENGTH),
+                32..=47 => (h(b, c, d), (3 * idx + 5) % DIGEST_LENGTH),
+                48..=63 => (i(b, c, d), (7 * idx) % DIGEST_LENGTH),
                 _ => unreachable!(),
             };
             let part_value = hacheutil::bytes_to_u32(&data[4 * g..4 * g + 4]);
-            let f = value + a + Wrapping(*t_value) + Wrapping(part_value);
+            let f = value
+                .wrapping_add(a)
+                .wrapping_add(*t_value)
+                .wrapping_add(part_value);
             a = d;
             d = c;
             c = b;
-            b += Wrapping(f.0.rotate_left(SHIFTS[idx].into()));
+            b = b.wrapping_add(f.rotate_left(SHIFTS[idx].into()));
         }
-        self.state[0] += a;
-        self.state[1] += b;
-        self.state[2] += c;
-        self.state[3] += d;
+        self.state[0] = self.state[0].wrapping_add(a);
+        self.state[1] = self.state[1].wrapping_add(b);
+        self.state[2] = self.state[2].wrapping_add(c);
+        self.state[3] = self.state[3].wrapping_add(d);
 
         self
     }
@@ -153,7 +150,7 @@ impl MD5 {
 
         (0..DIGEST_LENGTH)
             .into_iter()
-            .map(|i| (self.state[i >> 2].0 >> ((i & 3) << 3)) as u8)
+            .map(|i| (self.state[i >> 2] >> ((i & 3) << 3)) as u8)
             .collect::<Vec<_>>()
             .try_into()
             .expect("Couldn't transform vec into slice")
