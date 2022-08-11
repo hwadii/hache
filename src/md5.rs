@@ -142,7 +142,7 @@ impl MD5 {
             .map(|i| (self.count[i >> 2] >> ((i & 3) << 3)) as u8)
             .collect::<Vec<_>>()
             .try_into()
-            .expect("Couldn't transfrom vec into slice");
+            .expect("Couldn't transfrom vec into array");
 
         // Pad out to 56 mod 64
         let index = (self.count[0] >> 3) & 63;
@@ -157,7 +157,7 @@ impl MD5 {
             .map(|i| (self.state[i >> 2] >> ((i & 3) << 3)) as u8)
             .collect::<Vec<_>>()
             .try_into()
-            .expect("Couldn't transform vec into slice")
+            .expect("Couldn't transform vec into array")
     }
 
     fn as_str(&mut self) -> Result<String, Box<dyn Error>> {
