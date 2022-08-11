@@ -1,7 +1,7 @@
 use std::error::Error;
 use std::fmt::Write;
 
-use crate::{Digest, hacheutil};
+use crate::Digest;
 
 const BLOCK_LENGTH: usize = 64;
 const DIGEST_LENGTH: usize = 16;
@@ -72,7 +72,11 @@ impl MD5 {
                 48..=63 => (i(b, c, d), (7 * idx) % DIGEST_LENGTH),
                 _ => unreachable!(),
             };
-            let part_value = hacheutil::bytes_to_u32(&data[4 * g..4 * g + 4]);
+            let part_value = u32::from_le_bytes(
+                data[4 * g..4 * g + 4]
+                    .try_into()
+                    .expect("Couldn't transfrom slice into array"),
+            );
             let f = value
                 .wrapping_add(a)
                 .wrapping_add(*t_value)
