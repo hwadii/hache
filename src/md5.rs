@@ -72,7 +72,7 @@ impl MD5 {
                 48..=63 => (i(b, c, d), (7 * idx) % DIGEST_LENGTH),
                 _ => unreachable!(),
             };
-            let part_value = u32::from_le_bytes(
+            let part_value = u32::from_ne_bytes(
                 data[4 * g..4 * g + 4]
                     .try_into()
                     .expect("Couldn't transfrom slice into array"),
