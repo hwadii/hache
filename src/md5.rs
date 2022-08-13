@@ -258,4 +258,11 @@ mod tests {
         let digest = MD5::new().update(b"a").reset().finish().to_string();
         assert_eq!(digest, "d41d8cd98f00b204e9800998ecf8427e");
     }
+
+    #[test]
+    fn test_to_string_before_finish() {
+        let digest = MD5::new().update(b"a").to_string();
+        // Is this acceptable? Or make it an Option that can be None?
+        assert_eq!(digest, "00000000000000000000000000000000");
+    }
 }
