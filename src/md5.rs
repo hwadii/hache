@@ -35,7 +35,7 @@ pub struct MD5 {
 }
 
 impl MD5 {
-    const fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             state: INITIAL_STATE,
             count: [0, 0],
@@ -136,7 +136,7 @@ impl MD5 {
         self
     }
 
-    fn finish(&mut self) -> &Self {
+    pub fn finish(&mut self) -> &Self {
         // Save the length before padding.
         let bits: [u8; 8] = (0..8)
             .into_iter()
